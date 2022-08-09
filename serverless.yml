@@ -1,17 +1,90 @@
 service: sls-notes-backend
 
+plugins:
+  - serverless-offline
 frameworkVersion: "3"
+
+custom:
+  allowedHeaders:
+    - Accept
+    - Content-Type
+    - Content-Length
+    - Authorization
+    - X-Amz-Date
+    - X-Api-Key
+    - app_user_id
+    - app_user_name
 
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs14.x
   region: us-east-1
   stage: prod
   memorySize: 128
   timeout: 5
-  endpointType: regional
+  endpointType: REGIONAL
   environment:
     NOTES_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:PutItem
+        - dynamodb:Delete
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.NOTES_TABLE}"
+
+functions:
+  add-note:
+    handler: api/add-note.add
+    description: :POST /note
+    events:
+      - http:
+          path: note
+          method: post
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+
+  update-note:
+    handler: api/update-note.update
+    description: :PATCH /note
+    events:
+      - http:
+          path: note
+          method: patch
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-notes:
+    handler: api/get-notes.getAll
+    description: :GET /notes
+    events:
+      - http:
+          path: notes
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-note:
+    handler: api/get-note.get
+    description: :GET /note/n/{note_id}
+    events:
+      - http:
+          path: note/n/{note_id}
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  delete-note:
+    handler: api/delete-note.delete
+    description: :DELETE /note/t/{timestamp}
+    events:
+      - http:
+          path: note/t/{timestamp}
+          method: delete
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
 
 resources:
   Resources:
